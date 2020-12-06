@@ -133,8 +133,6 @@ public class RTCube extends RTObject
   {
     Vec3 rorig = r.getOrigin(), rdir = r.getDirection();
     Vec3 origin, direction;
-    //double cubeTol = Math.max(Math.max(Math.max(maxx-minx, maxy-miny), maxz-minz), rorig.length()*0.01)*TOL;
-    //double cubeTol = rorig.length()*TOL;
 
     if (transform)
     {
