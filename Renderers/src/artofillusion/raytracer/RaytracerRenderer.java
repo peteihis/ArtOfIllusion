@@ -891,6 +891,13 @@ public class RaytracerRenderer implements Renderer, Runnable
         getWorkspace().cleanup();
       }
     });
+
+    // Calculating the renderpreview update rate based on resolution
+    // Let's keep it fast for the i'st ray set.
+
+    long updateInterval = (long)(height*width/10000);
+    updateInterval = updateInterval > 200l ?  200l : updateInterval < 40l ? 40l : updateInterval;
+
     for (currentScale[0] = 1<<(int)(Math.log(width/32)/Math.log(2.0)); currentScale[0] >= 1; currentScale[0] /= 2)
     {
       currentWidth[0] = (int) Math.ceil((double) width/currentScale[0]);
@@ -904,7 +911,7 @@ public class RaytracerRenderer implements Renderer, Runnable
         return;
       }
       long currentTime = System.currentTimeMillis();
-      if (currentTime-updateTime > 250 || currentScale[0] == 1 && currentTime-updateTime > 150)
+      if (currentTime-updateTime > updateInterval)
       {
         imageSource.newPixels();
         listener.imageUpdated(img);
@@ -929,6 +936,12 @@ public class RaytracerRenderer implements Renderer, Runnable
     // the results are not sufficiently converged for a given pixel, double the number of
     // rays for that pixel, and every adjacent pixel.  Repeat until everything converges,
     // or we reach maxRays.
+
+    // Before sending more rays, lets make sure, the image from the first round is on teh screen.
+
+    imageSource.newPixels();
+    listener.imageUpdated(img);
+    updateTime = System.currentTimeMillis();
 
     PixelInfo tempPixel = new PixelInfo();
     RGBColor tempColor = new RGBColor();
@@ -993,6 +1006,11 @@ public class RaytracerRenderer implements Renderer, Runnable
       }
     });
 
+    // Calculating a new update rate. Keeping slower pace than on the first round.
+
+    updateInterval = (long)(height*width/500);
+    updateInterval = updateInterval > 4000l ?  4000l : updateInterval < 400l ? 400l : updateInterval;
+
     for (currentRow[0] = 0; currentRow[0] < height-1; currentRow[0]++)
     {
       // Keep refining the pixels in the current set of six rows until they converge, or
@@ -1051,7 +1069,7 @@ public class RaytracerRenderer implements Renderer, Runnable
       // Copy the colors into the image, and update the image if enough time has elapsed.
 
       recordRow(pix, tempPixel, currentRow[0]);
-      if (System.currentTimeMillis()-updateTime > 5000)
+      if (System.currentTimeMillis()-updateTime > updateInterval)
       {
         imageSource.newPixels();
         listener.imageUpdated(img);
