@@ -802,6 +802,7 @@ public class RaytracerRenderer implements Renderer, Runnable
   @Override
   public void run()
   {
+    long start = System.currentTimeMillis();
     long updateTime = System.currentTimeMillis();
     final Thread thisThread = Thread.currentThread();
     if (renderThread != thisThread)
@@ -895,8 +896,8 @@ public class RaytracerRenderer implements Renderer, Runnable
     // Calculating the renderpreview update rate based on resolution
     // Let's keep it fast for the i'st ray set.
 
-    long updateInterval = (long)(height*width/10000);
-    updateInterval = updateInterval > 200l ?  200l : updateInterval < 40l ? 40l : updateInterval;
+    long updateInterval = (long)(height*width/20000);
+    updateInterval = updateInterval > 250l ?  250l : updateInterval < 40l ? 40l : updateInterval;
 
     for (currentScale[0] = 1<<(int)(Math.log(width/32)/Math.log(2.0)); currentScale[0] >= 1; currentScale[0] /= 2)
     {
@@ -931,17 +932,18 @@ public class RaytracerRenderer implements Renderer, Runnable
       return;
     }
 
+    // Before sending more rays, lets make sure, the image from the first round is
+    // drawn on the preview.
+
+    imageSource.newPixels();
+    listener.imageUpdated(img);
+    updateTime = System.currentTimeMillis();
+
     // We need to adaptively decide how many rays to use for each pixel.  To save memory,
     // we only deal with six rows at a time.  Begin by sending minRays for each pixel.  If
     // the results are not sufficiently converged for a given pixel, double the number of
     // rays for that pixel, and every adjacent pixel.  Repeat until everything converges,
     // or we reach maxRays.
-
-    // Before sending more rays, lets make sure, the image from the first round is on teh screen.
-
-    imageSource.newPixels();
-    listener.imageUpdated(img);
-    updateTime = System.currentTimeMillis();
 
     PixelInfo tempPixel = new PixelInfo();
     RGBColor tempColor = new RGBColor();
@@ -1008,8 +1010,8 @@ public class RaytracerRenderer implements Renderer, Runnable
 
     // Calculating a new update rate. Keeping slower pace than on the first round.
 
-    updateInterval = (long)(height*width/500);
-    updateInterval = updateInterval > 4000l ?  4000l : updateInterval < 400l ? 400l : updateInterval;
+    updateInterval = (long)(height*width/800);
+    updateInterval = updateInterval > 4000l ?  4000l : updateInterval < 250l ? 250l : updateInterval;
 
     for (currentRow[0] = 0; currentRow[0] < height-1; currentRow[0]++)
     {
@@ -1097,6 +1099,8 @@ public class RaytracerRenderer implements Renderer, Runnable
     imageSource.newPixels();
     threads.finish();
     finish();
+    long end = System.currentTimeMillis();
+    System.out.println((double)(end-start)/1000.0);
   }
 
   /** Load a row of pixels from the image. */
