@@ -1,5 +1,5 @@
 /* Copyright (C) 1999-2008 by Peter Eastman
-   Modifications copyright (C) 2017-2024 Petri Ihalainen
+   Changes copyright (C) 2017-2026 Petri Ihalainen
    Changes copyright (C) 2017-2020 by Maksim Khramov
 
    This program is free software; you can redistribute it and/or modify it under the
@@ -29,6 +29,7 @@ public abstract class ObjectViewer extends ViewerCanvas
 {
   protected MeshEditController controller;
   protected SceneCamera renderedModeCamera;
+  protected Renderer viewRenderer;
   protected boolean showScene, useWorldCoords, freehandSelection, draggingBox, squareBox, sentClick;
   protected Point clickPoint, dragPoint;
   protected Vector<Point> selectBoundsPoints;
@@ -39,7 +40,8 @@ public abstract class ObjectViewer extends ViewerCanvas
   public ObjectViewer(MeshEditController controller, RowContainer p)
   {
     super(ArtOfIllusion.getPreferences().getUseOpenGL() && isOpenGLAvailable());
-    this.controller = controller;
+    this.controller    = controller;
+    viewRenderer       = null;
     renderedModeCamera = null;
     buildChoices(p);
   }
@@ -106,9 +108,17 @@ public abstract class ObjectViewer extends ViewerCanvas
     {
       // Re-render the image.
 
-      Renderer rend = ArtOfIllusion.getPreferences().getObjectPreviewRenderer();
-      if (rend == null)
-        return;
+      if (viewRenderer == null)
+        try
+        {
+          viewRenderer = ArtOfIllusion.getPreferences().getDefaultRenderer().getClass().newInstance();
+        }
+        catch(Exception i)
+        {
+          return;
+        }
+      //if (viewRenderer == null)
+      //  return;
       Scene sc;
       Camera cam = theCamera.duplicate();
       if (showScene && theScene != null)
@@ -147,7 +157,7 @@ public abstract class ObjectViewer extends ViewerCanvas
         obj.getCoords().transformCoordinates(getDisplayCoordinates().fromLocal());
         sc.addObject(obj, null);
       }
-      rend.configurePreview();
+      viewRenderer.configurePreview();
       int h = getBounds().height;
       if (renderedModeCamera == null)
         renderedModeCamera = new SceneCamera();
@@ -173,10 +183,14 @@ public abstract class ObjectViewer extends ViewerCanvas
           repaint();
         }
       };
-      rend.renderScene(sc, cam, listener, renderedModeCamera);
+      viewRenderer.renderScene(sc, cam, listener, renderedModeCamera);
     }
-    else
+    else if (viewRenderer != null)
+    {
+      viewRenderer = null;
       renderedModeCamera = null;
+      System.gc();
+    }
   }
 
   @Override

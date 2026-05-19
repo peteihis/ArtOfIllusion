@@ -29,6 +29,7 @@ public class SceneViewer extends ViewerCanvas
 {
   Scene theScene;
   EditingWindow parentFrame;
+  Renderer viewRenderer;
   SceneCamera renderedModeCamera;
   private Vector<ObjectInfo> cameras;
   boolean draggingBox, draggingSelectionBox, squareBox, sentClick, dragging;
@@ -46,6 +47,7 @@ public class SceneViewer extends ViewerCanvas
     super(ArtOfIllusion.getPreferences().getUseOpenGL() && isOpenGLAvailable() && !forceSoftwareRendering);
     theScene = s;
     parentFrame = fr;
+    viewRenderer = null;
     renderedModeCamera = null;
     addEventLink(MouseClickedEvent.class, this, "mouseClicked");
     draggingBox = draggingSelectionBox = false;
@@ -213,13 +215,19 @@ public class SceneViewer extends ViewerCanvas
     super.viewChanged(selectionOnly);
     if (renderMode == RENDER_RENDERED && !selectionOnly)
     {
-      // Re-render the image.
-
-      Renderer rend = ArtOfIllusion.getPreferences().getObjectPreviewRenderer();
-      if (rend == null)
-        return;
+      if (viewRenderer == null)
+        try
+        {
+          viewRenderer = ArtOfIllusion.getPreferences().getDefaultRenderer().getClass().newInstance();
+        }
+        catch(Exception i)
+        {
+          return;
+        };
+      //if (viewRenderer == null)
+      //  return;
       Camera cam = theCamera.duplicate();
-      rend.configurePreview();
+      viewRenderer.configurePreview();
       int h = getBounds().height;
       if (renderedModeCamera == null)
         renderedModeCamera = new SceneCamera();
@@ -248,10 +256,14 @@ public class SceneViewer extends ViewerCanvas
           repaint();
         }
       };
-      rend.renderScene(theScene, cam, listener, renderedModeCamera);
+      viewRenderer.renderScene(theScene, cam, listener, renderedModeCamera);
     }
-    else
+    else if (viewRenderer != null)
+    {
+      viewRenderer = null;
       renderedModeCamera = null;
+      System.gc();
+    }
   }
 
   @Override
